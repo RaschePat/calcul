@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>태양광 각관 절단 최적화 계산기</title>
+
+    <!-- PWA 설정 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
+    <link rel="icon" href="icon-192.png" type="image/png">
+
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js")
+                .then(() => console.log("Service Worker Registered"))
+                .catch(err => console.error("SW registration failed:", err));
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+        .input-row:last-child {
+            margin-bottom: 0;
+        }
+        label {
+            min-width: 120px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="number"] {
+            width: 100px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .add-btn {
+            background: #27ae60;
+        }
+        .add-btn:hover {
+            background: #219a52;
+        }
+        .remove-btn {
+            background: #e74c3c;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .remove-btn:hover {
+            background: #c0392b;
+        }
+        .result-section {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 5px solid #27ae60;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .result-value {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .waste-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border-left: 5px solid #ffc107;
+        }
+        .material-lengths {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #2196f3;
+        }
+        .cutting-details {
+            background: #f3e5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border-left: 5px solid #9c27b0;
+        }
+        .detail-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 태양광 각관 절단 최적화 계산기</h1>
+        <div class="material-lengths">
+            <h3>📏 원재료 규격</h3>
+            <p><strong>6m 각관:</strong> 6,000mm | <strong>7.2m 각관:</strong> 7,200mm | <strong>9m 각관:</strong> 9,000mm</p>
+        </div>
+        <div class="input-section">
+            <h3>📝 필요한 각관 입력</h3>
+            <div id="inputRows">
+                <div class="input-row">
+                    <label>길이 (mm):</label>
+                    <input type="number" class="length-input" placeholder="예: 500">
+                    <label>수량 (개):</label>
+                    <input type="number" class="quantity-input" placeholder="예: 30">
+                    <button class="remove-btn" onclick="removeRow(this)">❌ 삭제</button>
+                </div>
+            </div>
+            <button class="add-btn" onclick="addRow()">➕ 항목 추가</button>
+            <button onclick="calculate()">🧮 최적화 계산</button>
+            <button onclick="clearAll()">🗑️ 전체 삭제</button>
+        </div>
+        <div id="result" style="display:none;" class="result-section">
+            <h3>📊 최적화 결과</h3>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const MATERIALS = [6000, 7200, 9000];
+        const MATERIAL_NAMES = ['6m', '7.2m', '9m'];
+
+        function addRow() {
+            const inputRows = document.getElementById('inputRows');
+            const newRow = document.createElement('div');
+            newRow.className = 'input-row';
+            newRow.innerHTML = `
+                <label>길이 (mm):</label>
+                <input type="number" class="length-input" placeholder="예: 500">
+                <label>수량 (개):</label>
+                <input type="number" class="quantity-input" placeholder="예: 30">
+                <button class="remove-btn" onclick="removeRow(this)">❌ 삭제</button>
+            `;
+            inputRows.appendChild(newRow);
+        }
+
+        function removeRow(button) {
+            const rows = document.querySelectorAll('.input-row');
+            if (rows.length > 1) {
+                button.parentElement.remove();
+            } else {
+                alert('최소 하나의 항목은 필요합니다.');
+            }
+        }
+
+        function clearAll() {
+            const inputRows = document.getElementById('inputRows');
+            inputRows.innerHTML = `
+                <div class="input-row">
+                    <label>길이 (mm):</label>
+                    <input type="number" class="length-input" placeholder="예: 500">
+                    <label>수량 (개):</label>
+                    <input type="number" class="quantity-input" placeholder="예: 30">
+                    <button class="remove-btn" onclick="removeRow(this)">❌ 삭제</button>
+                </div>
+            `;
+            document.getElementById('result').style.display = 'none';
+        }
+
+        function getInputData() {
+            const lengthInputs = document.querySelectorAll('.length-input');
+            const quantityInputs = document.querySelectorAll('.quantity-input');
+            const requirements = [];
+
+            for (let i = 0; i < lengthInputs.length; i++) {
+                const length = parseInt(lengthInputs[i].value);
+                const quantity = parseInt(quantityInputs[i].value);
+                if (length && quantity && length > 0 && quantity > 0) {
+                    requirements.push({ length, quantity });
+                }
+            }
+            return requirements;
+        }
+
+        function optimizeCutting(requirements) {
+            let pieces = [];
+            requirements.forEach(req => {
+                for (let i = 0; i < req.quantity; i++) {
+                    pieces.push(req.length);
+                }
+            });
+            pieces.sort((a, b) => b - a);
+
+            let solution = [0, 0, 0];
+            let remainingPieces = [...pieces];
+
+            while (remainingPieces.length > 0) {
+                let bestFit = -1;
+                let bestMaterial = -1;
+                let bestCombination = [];
+
+                for (let m = 0; m < MATERIALS.length; m++) {
+                    let materialLength = MATERIALS[m];
+                    let combination = [];
+                    let tempRemaining = [...remainingPieces];
+
+                    for (let i = 0; i < tempRemaining.length; i++) {
+                        if (tempRemaining[i] <= materialLength) {
+                            combination.push(tempRemaining[i]);
+                            materialLength -= tempRemaining[i];
+                            tempRemaining[i] = -1;
+                        }
+                    }
+
+                    const efficiency = combination.reduce((sum, p) => sum + p, 0) / MATERIALS[m];
+                    if (efficiency > bestFit) {
+                        bestFit = efficiency;
+                        bestMaterial = m;
+                        bestCombination = combination;
+                    }
+                }
+
+                if (bestMaterial === -1) break;
+
+                solution[bestMaterial]++;
+                bestCombination.forEach(piece => {
+                    const index = remainingPieces.indexOf(piece);
+                    if (index > -1) remainingPieces.splice(index, 1);
+                });
+            }
+
+            const totalUsed = solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
+            const totalNeeded = pieces.reduce((sum, p) => sum + p, 0);
+            const waste = totalUsed - totalNeeded;
+
+            return {
+                solution,
+                waste,
+                details: generateCuttingDetails(requirements, solution)
+            };
+        }
+
+        function generateCuttingDetails(requirements, solution) {
+            const details = [];
+            for (let i = 0; i < MATERIALS.length; i++) {
+                if (solution[i] > 0) {
+                    details.push(`${MATERIAL_NAMES[i]} 각관 ${solution[i]}개 사용`);
+                }
+            }
+            return details;
+        }
+
+        function calculate() {
+            const requirements = getInputData();
+            if (requirements.length === 0) {
+                alert('유효한 데이터를 입력해주세요.');
+                return;
+            }
+            for (let req of requirements) {
+                if (req.length > Math.max(...MATERIALS)) {
+                    alert(`${req.length}mm는 최대 재료 길이(${Math.max(...MATERIALS)}mm)보다 큽니다.`);
+                    return;
+                }
+            }
+            const result = optimizeCutting(requirements);
+            displayResult(requirements, result);
+        }
+
+        function displayResult(requirements, result) {
+            const resultDiv = document.getElementById('result');
+            const contentDiv = document.getElementById('resultContent');
+
+            let html = '<div class="result-item"><span class="result-label">📋 입력된 요구사항:</span><span></span></div>';
+            requirements.forEach(req => {
+                html += `<div class="result-item" style="margin-left: 20px;"><span>${req.length}mm</span><span>${req.quantity}개</span></div>`;
+            });
+
+            html += '<div class="result-item"><span class="result-label">🔧 필요한 원재료:</span><span></span></div>';
+            result.solution.forEach((count, i) => {
+                if (count > 0) {
+                    html += `<div class="result-item" style="margin-left: 20px;"><span>${MATERIAL_NAMES[i]} 각관</span><span class="result-value">${count}개</span></div>`;
+                }
+            });
+
+            const totalCost = result.solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
+            const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
+            const wastePercentage = ((result.waste / totalCost) * 100).toFixed(2);
+
+            html += `
+                <div class="waste-info">
+                    <div class="result-item"><span class="result-label">📏 총 구매 길이:</span><span class="result-value">${totalCost.toLocaleString()}mm</span></div>
+                    <div class="result-item"><span class="result-label">📏 실제 필요 길이:</span><span class="result-value">${totalNeeded.toLocaleString()}mm</span></div>
+                    <div class="result-item"><span class="result-label">⚠️ 손실 길이:</span><span class="result-value">${result.waste.toLocaleString()}mm (${wastePercentage}%)</span></div>
+                </div>
+            `;
+
+            if (result.details.length > 0) {
+                html += '<div class="cutting-details"><h4>✂️ 절단 정보:</h4>';
+                result.details.forEach(detail => {
+                    html += `<div class="detail-item">${detail}</div>`;
+                });
+                html += '</div>';
+            }
+
+            contentDiv.innerHTML = html;
+            resultDiv.style.display = 'block';
+            resultDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.onload = function() {
+            const lengthInputs = document.querySelectorAll('.length-input');
+            const quantityInputs = document.querySelectorAll('.quantity-input');
+
+            lengthInputs[0].value = 500;
+            quantityInputs[0].value = 30;
+
+            addRow();
+            lengthInputs[1].value = 1200;
+            quantityInputs[1].value = 30;
+
+            addRow();
+            const updatedLengthInputs = document.querySelectorAll('.length-input');
+            const updatedQuantityInputs = document.querySelectorAll('.quantity-input');
+            updatedLengthInputs[2].value = 1700;
+            updatedQuantityInputs[2].value = 50;
+        };
+    </script>
+</body>
+</html>
