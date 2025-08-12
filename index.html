@@ -4,20 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>태양광 각관 절단 최적화 계산기</title>
-
-    <!-- PWA 설정 -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3498db">
-    <link rel="icon" href="icon-192.png" type="image/png">
-
-    <script>
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("service-worker.js")
-                .then(() => console.log("Service Worker Registered"))
-                .catch(err => console.error("SW registration failed:", err));
-        }
-    </script>
-
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -146,15 +132,25 @@
             font-family: monospace;
             font-size: 13px;
         }
+        .calculation-status {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border-left: 5px solid #17a2b8;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔧 태양광 각관 절단 최적화 계산기</h1>
+        <h1>🔧 태양광 각관 절단 최적화 계산기 (개선판)</h1>
+        
         <div class="material-lengths">
             <h3>📏 원재료 규격</h3>
             <p><strong>6m 각관:</strong> 6,000mm | <strong>7.2m 각관:</strong> 7,200mm | <strong>9m 각관:</strong> 9,000mm</p>
         </div>
+        
         <div class="input-section">
             <h3>📝 필요한 각관 입력</h3>
             <div id="inputRows">
@@ -170,6 +166,7 @@
             <button onclick="calculate()">🧮 최적화 계산</button>
             <button onclick="clearAll()">🗑️ 전체 삭제</button>
         </div>
+
         <div id="result" style="display:none;" class="result-section">
             <h3>📊 최적화 결과</h3>
             <div id="resultContent"></div>
@@ -177,6 +174,7 @@
     </div>
 
     <script>
+        // 원재료 길이 (mm)
         const MATERIALS = [6000, 7200, 9000];
         const MATERIAL_NAMES = ['6m', '7.2m', '9m'];
 
@@ -225,6 +223,7 @@
             for (let i = 0; i < lengthInputs.length; i++) {
                 const length = parseInt(lengthInputs[i].value);
                 const quantity = parseInt(quantityInputs[i].value);
+                
                 if (length && quantity && length > 0 && quantity > 0) {
                     requirements.push({ length, quantity });
                 }
@@ -232,48 +231,159 @@
             return requirements;
         }
 
+        // 개선된 최적화 알고리즘
         function optimizeCutting(requirements) {
+            // 필요한 각관들을 배열로 변환
             let pieces = [];
             requirements.forEach(req => {
                 for (let i = 0; i < req.quantity; i++) {
                     pieces.push(req.length);
                 }
             });
+
+            // 긴 길이부터 정렬
             pieces.sort((a, b) => b - a);
 
-            let solution = [0, 0, 0];
-            let remainingPieces = [...pieces];
+            let bestSolution = null;
+            let minWaste = Infinity;
+            let bestCuttingPlan = [];
 
-            while (remainingPieces.length > 0) {
-                let bestFit = -1;
-                let bestMaterial = -1;
-                let bestCombination = [];
+            // 합리적인 탐색 범위 설정
+            const totalNeeded = pieces.reduce((sum, p) => sum + p, 0);
+            const maxCounts = MATERIALS.map(mat => Math.ceil(totalNeeded / mat) + 2);
 
-                for (let m = 0; m < MATERIALS.length; m++) {
-                    let materialLength = MATERIALS[m];
-                    let combination = [];
-                    let tempRemaining = [...remainingPieces];
-
-                    for (let i = 0; i < tempRemaining.length; i++) {
-                        if (tempRemaining[i] <= materialLength) {
-                            combination.push(tempRemaining[i]);
-                            materialLength -= tempRemaining[i];
-                            tempRemaining[i] = -1;
+            console.log(`총 ${pieces.length}개 절단 필요, 총 길이: ${totalNeeded}mm`);
+            
+            // 동적 계획법과 백트래킹을 조합한 최적화
+            function findOptimalSolution() {
+                for (let count6 = 0; count6 <= maxCounts[0]; count6++) {
+                    for (let count72 = 0; count72 <= maxCounts[1]; count72++) {
+                        for (let count9 = 0; count9 <= maxCounts[2]; count9++) {
+                            const solution = [count6, count72, count9];
+                            const totalCapacity = solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
+                            
+                            // 용량이 부족하면 건너뛰기
+                            if (totalCapacity < totalNeeded) continue;
+                            
+                            // 현재 조합으로 모든 조각을 배치할 수 있는지 확인
+                            const cuttingResult = canFitAllPieces(pieces, solution);
+                            
+                            if (cuttingResult.success) {
+                                const waste = totalCapacity - totalNeeded;
+                                if (waste < minWaste) {
+                                    minWaste = waste;
+                                    bestSolution = [...solution];
+                                    bestCuttingPlan = cuttingResult.plan;
+                                }
+                            }
                         }
                     }
+                }
+            }
 
-                    const efficiency = combination.reduce((sum, p) => sum + p, 0) / MATERIALS[m];
-                    if (efficiency > bestFit) {
-                        bestFit = efficiency;
-                        bestMaterial = m;
-                        bestCombination = combination;
+            findOptimalSolution();
+
+            if (bestSolution === null) {
+                // 폴백: 간단한 그리디 알고리즘
+                console.log("최적해를 찾지 못했습니다. 그리디 알고리즘 사용.");
+                return greedyFallback(pieces);
+            }
+
+            return {
+                solution: bestSolution,
+                waste: minWaste,
+                details: generateDetailedCuttingPlan(bestCuttingPlan, bestSolution)
+            };
+        }
+
+        // 주어진 재료 조합으로 모든 조각을 배치할 수 있는지 확인
+        function canFitAllPieces(pieces, materialCounts) {
+            const materials = [];
+            
+            // 재료들 준비
+            materialCounts.forEach((count, i) => {
+                for (let j = 0; j < count; j++) {
+                    materials.push({
+                        length: MATERIALS[i],
+                        remaining: MATERIALS[i],
+                        type: i,
+                        cuts: []
+                    });
+                }
+            });
+
+            // 백트래킹으로 모든 조각 배치 시도
+            const remainingPieces = [...pieces];
+            
+            function backtrack(pieceIndex) {
+                if (pieceIndex >= remainingPieces.length) {
+                    return true; // 모든 조각을 성공적으로 배치
+                }
+
+                const piece = remainingPieces[pieceIndex];
+
+                for (let matIndex = 0; matIndex < materials.length; matIndex++) {
+                    if (materials[matIndex].remaining >= piece) {
+                        // 조각을 이 재료에 배치
+                        materials[matIndex].remaining -= piece;
+                        materials[matIndex].cuts.push(piece);
+
+                        // 다음 조각 배치 시도
+                        if (backtrack(pieceIndex + 1)) {
+                            return true;
+                        }
+
+                        // 백트래킹
+                        materials[matIndex].remaining += piece;
+                        materials[matIndex].cuts.pop();
                     }
                 }
 
-                if (bestMaterial === -1) break;
+                return false; // 이 조각을 배치할 수 없음
+            }
+
+            const success = backtrack(0);
+            return {
+                success,
+                plan: success ? materials : []
+            };
+        }
+
+        // 그리디 폴백 알고리즘
+        function greedyFallback(pieces) {
+            const solution = [0, 0, 0];
+            const materials = [];
+            const remainingPieces = [...pieces];
+
+            while (remainingPieces.length > 0) {
+                // 가장 효율적인 재료 선택
+                let bestMaterial = -1;
+                let bestEfficiency = -1;
+                let bestFit = [];
+
+                for (let m = 0; m < MATERIALS.length; m++) {
+                    const fit = findBestFit(remainingPieces, MATERIALS[m]);
+                    const efficiency = fit.totalUsed / MATERIALS[m];
+                    
+                    if (efficiency > bestEfficiency) {
+                        bestEfficiency = efficiency;
+                        bestMaterial = m;
+                        bestFit = fit.pieces;
+                    }
+                }
+
+                if (bestMaterial === -1 || bestFit.length === 0) {
+                    // 가장 큰 조각을 가장 큰 재료에 배치
+                    const largestPiece = Math.max(...remainingPieces);
+                    const largestMaterial = MATERIALS.length - 1;
+                    solution[largestMaterial]++;
+                    const index = remainingPieces.indexOf(largestPiece);
+                    remainingPieces.splice(index, 1);
+                    continue;
+                }
 
                 solution[bestMaterial]++;
-                bestCombination.forEach(piece => {
+                bestFit.forEach(piece => {
                     const index = remainingPieces.indexOf(piece);
                     if (index > -1) remainingPieces.splice(index, 1);
                 });
@@ -281,60 +391,126 @@
 
             const totalUsed = solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
             const totalNeeded = pieces.reduce((sum, p) => sum + p, 0);
-            const waste = totalUsed - totalNeeded;
 
             return {
                 solution,
-                waste,
-                details: generateCuttingDetails(requirements, solution)
+                waste: totalUsed - totalNeeded,
+                details: [`그리디 알고리즘으로 계산됨 (최적해가 아닐 수 있습니다)`]
             };
         }
 
-        function generateCuttingDetails(requirements, solution) {
-            const details = [];
-            for (let i = 0; i < MATERIALS.length; i++) {
-                if (solution[i] > 0) {
-                    details.push(`${MATERIAL_NAMES[i]} 각관 ${solution[i]}개 사용`);
+        // 주어진 길이에 가장 잘 맞는 조각들 찾기
+        function findBestFit(pieces, materialLength) {
+            const dp = Array(materialLength + 1).fill(false);
+            const parent = Array(materialLength + 1).fill(-1);
+            const pieceUsed = Array(materialLength + 1).fill(-1);
+            
+            dp[0] = true;
+
+            for (let i = 0; i < pieces.length; i++) {
+                const piece = pieces[i];
+                for (let w = materialLength; w >= piece; w--) {
+                    if (dp[w - piece] && !dp[w]) {
+                        dp[w] = true;
+                        parent[w] = w - piece;
+                        pieceUsed[w] = i;
+                    }
                 }
             }
+
+            // 가장 큰 사용 가능한 길이 찾기
+            let maxUsed = 0;
+            for (let i = materialLength; i >= 0; i--) {
+                if (dp[i]) {
+                    maxUsed = i;
+                    break;
+                }
+            }
+
+            // 사용된 조각들 추적
+            const usedPieces = [];
+            let current = maxUsed;
+            while (current > 0 && pieceUsed[current] !== -1) {
+                usedPieces.push(pieces[pieceUsed[current]]);
+                current = parent[current];
+            }
+
+            return {
+                totalUsed: maxUsed,
+                pieces: usedPieces
+            };
+        }
+
+        // 상세한 절단 계획 생성
+        function generateDetailedCuttingPlan(cuttingPlan, solution) {
+            const details = [];
+            
+            const materialCount = [0, 0, 0];
+            
+            cuttingPlan.forEach(material => {
+                materialCount[material.type]++;
+                const cuts = material.cuts.join('mm + ') + 'mm';
+                const waste = material.remaining;
+                details.push(`${MATERIAL_NAMES[material.type]} #${materialCount[material.type]}: ${cuts} (잔량: ${waste}mm)`);
+            });
+
             return details;
         }
 
         function calculate() {
             const requirements = getInputData();
+            
             if (requirements.length === 0) {
                 alert('유효한 데이터를 입력해주세요.');
                 return;
             }
+
+            // 입력값 검증
             for (let req of requirements) {
                 if (req.length > Math.max(...MATERIALS)) {
                     alert(`${req.length}mm는 최대 재료 길이(${Math.max(...MATERIALS)}mm)보다 큽니다.`);
                     return;
                 }
             }
-            const result = optimizeCutting(requirements);
-            displayResult(requirements, result);
+
+            // 계산 상태 표시
+            const resultDiv = document.getElementById('result');
+            const contentDiv = document.getElementById('resultContent');
+            contentDiv.innerHTML = '<div class="calculation-status">⏳ 최적해를 계산 중입니다...</div>';
+            resultDiv.style.display = 'block';
+
+            // 비동기로 계산 실행
+            setTimeout(() => {
+                const result = optimizeCutting(requirements);
+                displayResult(requirements, result);
+            }, 100);
         }
 
         function displayResult(requirements, result) {
             const resultDiv = document.getElementById('result');
             const contentDiv = document.getElementById('resultContent');
-
+            
             let html = '<div class="result-item"><span class="result-label">📋 입력된 요구사항:</span><span></span></div>';
             requirements.forEach(req => {
                 html += `<div class="result-item" style="margin-left: 20px;"><span>${req.length}mm</span><span>${req.quantity}개</span></div>`;
             });
 
             html += '<div class="result-item"><span class="result-label">🔧 필요한 원재료:</span><span></span></div>';
+            let hasMaterials = false;
             result.solution.forEach((count, i) => {
                 if (count > 0) {
                     html += `<div class="result-item" style="margin-left: 20px;"><span>${MATERIAL_NAMES[i]} 각관</span><span class="result-value">${count}개</span></div>`;
+                    hasMaterials = true;
                 }
             });
 
+            if (!hasMaterials) {
+                html += '<div class="result-item" style="margin-left: 20px;"><span>재료가 필요하지 않습니다</span><span></span></div>';
+            }
+
             const totalCost = result.solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
             const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
-            const wastePercentage = ((result.waste / totalCost) * 100).toFixed(2);
+            const wastePercentage = totalCost > 0 ? ((result.waste / totalCost) * 100).toFixed(2) : 0;
 
             html += `
                 <div class="waste-info">
@@ -345,7 +521,7 @@
             `;
 
             if (result.details.length > 0) {
-                html += '<div class="cutting-details"><h4>✂️ 절단 정보:</h4>';
+                html += '<div class="cutting-details"><h4>✂️ 상세 절단 계획:</h4>';
                 result.details.forEach(detail => {
                     html += `<div class="detail-item">${detail}</div>`;
                 });
@@ -353,26 +529,28 @@
             }
 
             contentDiv.innerHTML = html;
-            resultDiv.style.display = 'block';
             resultDiv.scrollIntoView({ behavior: 'smooth' });
         }
 
+        // 초기 예시 데이터 (테스트용)
         window.onload = function() {
             const lengthInputs = document.querySelectorAll('.length-input');
             const quantityInputs = document.querySelectorAll('.quantity-input');
-
+            
             lengthInputs[0].value = 500;
-            quantityInputs[0].value = 30;
-
-            addRow();
-            lengthInputs[1].value = 1200;
-            quantityInputs[1].value = 30;
-
+            quantityInputs[0].value = 1;
+            
             addRow();
             const updatedLengthInputs = document.querySelectorAll('.length-input');
             const updatedQuantityInputs = document.querySelectorAll('.quantity-input');
-            updatedLengthInputs[2].value = 1700;
-            updatedQuantityInputs[2].value = 50;
+            updatedLengthInputs[1].value = 1200;
+            updatedQuantityInputs[1].value = 4;
+            
+            addRow();
+            const finalLengthInputs = document.querySelectorAll('.length-input');
+            const finalQuantityInputs = document.querySelectorAll('.quantity-input');
+            finalLengthInputs[2].value = 2000;
+            finalQuantityInputs[2].value = 4;
         };
     </script>
 </body>
