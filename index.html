@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>태양광 각관 절단 최적화 계산기</title>
+    
+    <!-- PWA 매니페스트 -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIu2DnOyWkeq0kSDqsIHqtIDsoIHri6gg7LWc7Yag7ZmU6rOE6riE6riAIiwKICAic2hvcnRfbmFtZSI6ICLqsIHqtIDsoIHri6Ag6rOE6riE6riAIiwKICAiZGVzY3JpcHRpb24iOiAi7YOc7JaR6rSRIOqwgOqtgCDsoIHri6Ag7LWc7Yag7J2EIOy1nOyggO2ZlO2VmOuKlCDqsIvtmJTtmZQgKOqzhOumrOq4gCkiLAogICJzdGFydF91cmwiOiAiLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2Y1ZjVmNSIsCiAgInRoZW1lX2NvbG9yIjogIiMyYzNlNTAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUJwWkQwaWFXTnZiaUlnZG1sbGQwSnZlRDBpTUNBd0lESTFOaUF5TlRZaUlIaHRiRzV6UFNKb2RIUndPaTh2ZDNkM0xuY3pMbTl5Wnk4eU1EQXdMM04yWnlJK1BHSmNJR1pwYkd3OUltWm1aall5WlRKaUlpQnlaRDBpTXpVaUlHTjRQU0l4TWpnaUlHTjVQU0l4TWpnaUx6NE84M1JsZUhSZ1pHbHlaV04wYVc5dVBTSjJaWEowYVdOaGJDSWdhR1Z2VTJWa2NHOHVZMjl0SWc9PSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAic2l6ZXMiOiAiYW55IgogICAgfSwKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUJwWkQwaWFXTnZiaUlnZG1sbGQwSnZlRDBpTUNBd0lESTFOaUF5TlRZaUlIaHRiRzV6UFNKb2RIUndPaTh2ZDNkM0xuY3pMbTl5Wnk4eU1EQXdMM04yWnlJK1BHSmNJR1pwYkd3OUltWm1aall5WlRKaUlpQnlaRDBpTXpVaUlHTjRQU0l4TWpnaUlHTjVQU0l4TWpnaUx6NE84M1JsZUhSZ1pHbHlaV04wYVc5dVBTSjJaWEowYVdOaGJTSWdhR1Z2VTJWa2NHOHVZMjl0SWc9PSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIKICAgIH0KICBdCn0=">
+    
+    <!-- iOS 메타 태그 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="각관 계산기">
+    
+    <!-- 파비콘 -->
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyBpZD0iaWNvbiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGJjIGZpbGw9ImZmZjYyZTJiIiByZD0iMzUiIGN4PSIxMjgiIGN5PSIxMjgiLz48L3RleHRgZGlyZWN0aW9uPSJ2ZXJ0aWNhbCIgaGVvU2VkcG8uY29tSWc9PSI=" type="image/svg+xml">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -124,14 +135,6 @@
             margin-top: 15px;
             border-left: 5px solid #9c27b0;
         }
-        .detail-item {
-            margin: 8px 0;
-            padding: 8px;
-            background: white;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 13px;
-        }
         .calculation-status {
             background: #d1ecf1;
             padding: 10px;
@@ -140,6 +143,70 @@
             border-left: 5px solid #17a2b8;
             font-style: italic;
         }
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+        .install-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+        .install-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -147,8 +214,24 @@
         <h1>🔧 태양광 각관 절단 최적화 계산기 (개선판)</h1>
         
         <div class="material-lengths">
-            <h3>📏 원재료 규격</h3>
-            <p><strong>6m 각관:</strong> 6,000mm | <strong>7.2m 각관:</strong> 7,200mm | <strong>9m 각관:</strong> 9,000mm</p>
+            <h3>📏 원재료 규격 및 보유 수량</h3>
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label><strong>6m 각관 (6,000mm):</strong></label>
+                    <input type="number" id="stock6m" value="99" min="0" max="999" style="width: 60px; margin-left: 10px;">개
+                </div>
+                <div>
+                    <label><strong>7.2m 각관 (7,200mm):</strong></label>
+                    <input type="number" id="stock72m" value="99" min="0" max="999" style="width: 60px; margin-left: 10px;">개
+                </div>
+                <div>
+                    <label><strong>9m 각관 (9,000mm):</strong></label>
+                    <input type="number" id="stock9m" value="99" min="0" max="999" style="width: 60px; margin-left: 10px;">개
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                <strong>⚠️ 톱날 절단 손실:</strong> 절단 1회당 3mm 손실 (kerf 고려됨)
+            </div>
         </div>
         
         <div class="input-section">
@@ -171,12 +254,20 @@
             <h3>📊 최적화 결과</h3>
             <div id="resultContent"></div>
         </div>
+        
+        <!-- 설치 프롬프트 -->
+        <div id="installPrompt" class="install-prompt">
+            <div>📱 이 앱을 홈화면에 설치하시겠습니까?</div>
+            <button id="installBtn" class="install-btn">설치</button>
+            <button id="closeBtn" class="close-btn">나중에</button>
+        </div>
     </div>
 
     <script>
         // 원재료 길이 (mm)
         const MATERIALS = [6000, 7200, 9000];
         const MATERIAL_NAMES = ['6m', '7.2m', '9m'];
+        const KERF_LOSS = 3; // 톱날 절단 손실 (mm)
 
         function addRow() {
             const inputRows = document.getElementById('inputRows');
@@ -231,38 +322,37 @@
             return requirements;
         }
 
-        // 대량 주문 최적화된 고속 알고리즘
-        function optimizeCutting(requirements) {
-            const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
-            console.log(`총 필요 길이: ${totalNeeded}mm`);
+        function getStockData() {
+            return [
+                parseInt(document.getElementById('stock6m').value) || 0,
+                parseInt(document.getElementById('stock72m').value) || 0,
+                parseInt(document.getElementById('stock9m').value) || 0
+            ];
+        }
 
-            // 빠른 수학적 최적화 접근법
+        // 대량 주문 최적화된 고속 알고리즘 (재고 제한 + 절단 손실 고려)
+        function optimizeCutting(requirements, stockLimits) {
+            const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
+            console.log(`총 필요 길이: ${totalNeeded}mm, 재고 한계: [${stockLimits.join(', ')}]`);
+
             let bestSolution = null;
             let minWaste = Infinity;
             let bestCuttingPlan = [];
 
-            // 합리적인 탐색 범위 설정 (훨씬 제한적으로)
-            const maxTotal = Math.ceil(totalNeeded / Math.min(...MATERIALS)) + 5;
-            
-            // 각 재료 타입별 최대 개수 제한
-            const max6m = Math.min(maxTotal, Math.ceil(totalNeeded / MATERIALS[0]) + 3);
-            const max72m = Math.min(maxTotal, Math.ceil(totalNeeded / MATERIALS[1]) + 3);
-            const max9m = Math.min(maxTotal, Math.ceil(totalNeeded / MATERIALS[2]) + 3);
-
-            // 빠른 조합 탐색
-            for (let count6 = 0; count6 <= max6m; count6++) {
-                for (let count72 = 0; count72 <= max72m; count72++) {
-                    for (let count9 = 0; count9 <= max9m; count9++) {
+            // 재고 한계 내에서만 탐색
+            for (let count6 = 0; count6 <= stockLimits[0]; count6++) {
+                for (let count72 = 0; count72 <= stockLimits[1]; count72++) {
+                    for (let count9 = 0; count9 <= stockLimits[2]; count9++) {
                         const solution = [count6, count72, count9];
                         const totalCapacity = solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
                         
                         if (totalCapacity < totalNeeded) continue;
                         
-                        // 빠른 적합성 검사 (그리디 방식)
-                        const fittingResult = quickFitTest(requirements, solution);
+                        // 절단 손실을 고려한 적합성 검사
+                        const fittingResult = quickFitTestWithKerf(requirements, solution);
                         
                         if (fittingResult.success) {
-                            const waste = totalCapacity - totalNeeded;
+                            const waste = totalCapacity - totalNeeded - fittingResult.totalKerfLoss;
                             if (waste < minWaste) {
                                 minWaste = waste;
                                 bestSolution = [...solution];
@@ -274,19 +364,25 @@
             }
 
             if (bestSolution === null) {
-                console.log("표준 알고리즘 실패, 고급 그리디 사용");
-                return advancedGreedy(requirements);
+                console.log("재고 내에서 해결 불가능, 재고 부족 경고 표시");
+                return {
+                    solution: [0, 0, 0],
+                    waste: 0,
+                    details: ["❌ 현재 재고로는 모든 요구사항을 충족할 수 없습니다.", "재고를 늘리거나 요구사항을 조정해주세요."],
+                    insufficient: true
+                };
             }
 
             return {
                 solution: bestSolution,
                 waste: minWaste,
-                details: generateQuickCuttingPlan(bestCuttingPlan, bestSolution)
+                details: generateDetailedCuttingPlanWithKerf(bestCuttingPlan, bestSolution),
+                kerfLoss: bestCuttingPlan.reduce((sum, plan) => sum + (plan.kerfLoss || 0), 0)
             };
         }
 
-        // 빠른 적합성 검사 (대량 처리용)
-        function quickFitTest(requirements, materialCounts) {
+        // 절단 손실을 고려한 빠른 적합성 검사
+        function quickFitTestWithKerf(requirements, materialCounts) {
             const materials = [];
             
             // 재료들 준비
@@ -296,7 +392,8 @@
                         length: MATERIALS[i],
                         remaining: MATERIALS[i],
                         type: i,
-                        cuts: []
+                        cuts: [],
+                        kerfLoss: 0
                     });
                 }
             });
@@ -312,9 +409,14 @@
                     
                     // 가장 적합한 재료 찾기
                     for (const material of materials) {
-                        if (material.remaining >= req.length) {
-                            material.remaining -= req.length;
+                        // 첫 번째 절단이면 kerf 손실 없음, 이후 절단마다 kerf 추가
+                        const kerfNeeded = material.cuts.length > 0 ? KERF_LOSS : 0;
+                        const totalNeeded = req.length + kerfNeeded;
+                        
+                        if (material.remaining >= totalNeeded) {
+                            material.remaining -= totalNeeded;
                             material.cuts.push(req.length);
+                            material.kerfLoss += kerfNeeded;
                             remainingQuantity--;
                             placed = true;
                             break;
@@ -322,12 +424,22 @@
                     }
                     
                     if (!placed) {
-                        return { success: false, plan: [] };
+                        return { success: false, plan: [], totalKerfLoss: 0 };
                     }
                 }
             }
 
-            return { success: true, plan: materials };
+            // 결과를 표준 형식으로 변환
+            const standardPlan = materials.map((material, index) => ({
+                material: material.type,
+                cuts: [...material.cuts],
+                waste: material.remaining,
+                kerfLoss: material.kerfLoss
+            }));
+
+            const totalKerfLoss = materials.reduce((sum, m) => sum + m.kerfLoss, 0);
+
+            return { success: true, plan: standardPlan, totalKerfLoss };
         }
 
         // 고급 그리디 알고리즘 (대량 처리 최적화)
@@ -378,10 +490,13 @@
                         if (req) req.quantity--;
                     });
 
+                    const cuts = bestCombination.pieces.map(p => p.length).filter(length => length !== undefined);
+                    const totalUsedInThisPiece = cuts.reduce((sum, cut) => sum + cut, 0);
+                    
                     cuttingPlan.push({
                         material: bestMaterial,
-                        cuts: bestCombination.pieces.map(p => p.length),
-                        waste: MATERIALS[bestMaterial] - bestCombination.totalUsed
+                        cuts: cuts,
+                        waste: MATERIALS[bestMaterial] - totalUsedInThisPiece
                     });
                 }
             }
@@ -445,30 +560,51 @@
             return bestCombination;
         }
 
-        // 빠른 절단 계획 생성
-        function generateQuickCuttingPlan(cuttingPlan, solution) {
+        // 절단 손실을 고려한 상세 절단 계획 생성
+        function generateDetailedCuttingPlanWithKerf(cuttingPlan, solution) {
             const details = [];
             const materialCount = [0, 0, 0];
             
-            cuttingPlan.forEach(plan => {
-                materialCount[plan.material]++;
-                const cuts = plan.cuts.join('mm + ') + 'mm';
-                details.push(`${MATERIAL_NAMES[plan.material]} #${materialCount[plan.material]}: ${cuts} (잔량: ${plan.waste}mm)`);
-            });
-
-            // 요약 정보 추가
-            if (cuttingPlan.length > 10) {
-                const summary = MATERIAL_NAMES.map((name, i) => 
-                    solution[i] > 0 ? `${name} ${solution[i]}개` : null
-                ).filter(s => s).join(', ');
-                details.unshift(`📋 총 사용: ${summary}`);
+            if (!cuttingPlan || cuttingPlan.length === 0) {
+                solution.forEach((count, i) => {
+                    if (count > 0) {
+                        for (let j = 0; j < count; j++) {
+                            details.push(`${MATERIAL_NAMES[i]} #${j + 1}: 자동 배치됨`);
+                        }
+                    }
+                });
+                return details;
             }
+
+            cuttingPlan.forEach((plan, index) => {
+                const materialType = plan.material || plan.type || 0;
+                const cuts = plan.cuts || [];
+                const waste = plan.waste || 0;
+                const kerfLoss = plan.kerfLoss || 0;
+                
+                if (materialType >= 0 && materialType < MATERIAL_NAMES.length) {
+                    materialCount[materialType]++;
+                    
+                    if (cuts.length > 0) {
+                        const cutsText = cuts
+                            .filter(cut => cut !== undefined && cut !== null)
+                            .map(cut => `${cut}mm`)
+                            .join(' + ');
+                        
+                        const kerfText = kerfLoss > 0 ? ` (절단손실: ${kerfLoss}mm, 잔량: ${waste}mm)` : ` (잔량: ${waste}mm)`;
+                        details.push(`${MATERIAL_NAMES[materialType]} #${materialCount[materialType]}: ${cutsText}${kerfText}`);
+                    } else {
+                        details.push(`${MATERIAL_NAMES[materialType]} #${materialCount[materialType]}: 자동 배치 (잔량: ${waste}mm)`);
+                    }
+                }
+            });
 
             return details;
         }
 
         function calculate() {
             const requirements = getInputData();
+            const stockLimits = getStockData();
             
             if (requirements.length === 0) {
                 alert('유효한 데이터를 입력해주세요.');
@@ -483,20 +619,26 @@
                 }
             }
 
+            // 재고 검증
+            if (stockLimits.every(stock => stock === 0)) {
+                alert('최소 하나의 재료 재고를 입력해주세요.');
+                return;
+            }
+
             // 계산 상태 표시
             const resultDiv = document.getElementById('result');
             const contentDiv = document.getElementById('resultContent');
-            contentDiv.innerHTML = '<div class="calculation-status">⏳ 최적해를 계산 중입니다...</div>';
+            contentDiv.innerHTML = '<div class="calculation-status">⏳ 재고 제한과 절단 손실을 고려하여 최적해를 계산 중입니다...</div>';
             resultDiv.style.display = 'block';
 
             // 비동기로 계산 실행
             setTimeout(() => {
-                const result = optimizeCutting(requirements);
-                displayResult(requirements, result);
+                const result = optimizeCutting(requirements, stockLimits);
+                displayResult(requirements, result, stockLimits);
             }, 100);
         }
 
-        function displayResult(requirements, result) {
+        function displayResult(requirements, result, stockLimits) {
             const resultDiv = document.getElementById('result');
             const contentDiv = document.getElementById('resultContent');
             
@@ -505,30 +647,48 @@
                 html += `<div class="result-item" style="margin-left: 20px;"><span>${req.length}mm</span><span>${req.quantity}개</span></div>`;
             });
 
-            html += '<div class="result-item"><span class="result-label">🔧 필요한 원재료:</span><span></span></div>';
-            let hasMaterials = false;
-            result.solution.forEach((count, i) => {
-                if (count > 0) {
-                    html += `<div class="result-item" style="margin-left: 20px;"><span>${MATERIAL_NAMES[i]} 각관</span><span class="result-value">${count}개</span></div>`;
-                    hasMaterials = true;
+            html += '<div class="result-item"><span class="result-label">📦 사용 가능한 재고:</span><span></span></div>';
+            stockLimits.forEach((stock, i) => {
+                if (stock > 0) {
+                    html += `<div class="result-item" style="margin-left: 20px;"><span>${MATERIAL_NAMES[i]} 각관</span><span>${stock}개 보유</span></div>`;
                 }
             });
 
-            if (!hasMaterials) {
-                html += '<div class="result-item" style="margin-left: 20px;"><span>재료가 필요하지 않습니다</span><span></span></div>';
+            if (result.insufficient) {
+                html += `<div class="waste-info" style="background: #f8d7da; border-left: 5px solid #dc3545;">
+                    <h4 style="color: #721c24;">❌ 재고 부족</h4>
+                    <div class="result-item"><span class="result-label">상태:</span><span style="color: #dc3545;">현재 재고로는 모든 요구사항을 충족할 수 없습니다</span></div>
+                </div>`;
+            } else {
+                html += '<div class="result-item"><span class="result-label">🔧 사용된 원재료:</span><span></span></div>';
+                let hasMaterials = false;
+                result.solution.forEach((count, i) => {
+                    if (count > 0) {
+                        const remaining = stockLimits[i] - count;
+                        html += `<div class="result-item" style="margin-left: 20px;"><span>${MATERIAL_NAMES[i]} 각관</span><span class="result-value">${count}개 사용 (${remaining}개 남음)</span></div>`;
+                        hasMaterials = true;
+                    }
+                });
+
+                if (!hasMaterials) {
+                    html += '<div class="result-item" style="margin-left: 20px;"><span>재료가 필요하지 않습니다</span><span></span></div>';
+                }
+
+                const totalCost = result.solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
+                const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
+                const kerfLoss = result.kerfLoss || 0;
+                const actualWaste = result.waste;
+                const wastePercentage = totalCost > 0 ? ((actualWaste / totalCost) * 100).toFixed(2) : 0;
+
+                html += `
+                    <div class="waste-info">
+                        <div class="result-item"><span class="result-label">📏 총 구매 길이:</span><span class="result-value">${totalCost.toLocaleString()}mm</span></div>
+                        <div class="result-item"><span class="result-label">📏 실제 필요 길이:</span><span class="result-value">${totalNeeded.toLocaleString()}mm</span></div>
+                        <div class="result-item"><span class="result-label">✂️ 절단 손실 (kerf):</span><span class="result-value">${kerfLoss.toLocaleString()}mm</span></div>
+                        <div class="result-item"><span class="result-label">⚠️ 남는 길이:</span><span class="result-value">${actualWaste.toLocaleString()}mm (${wastePercentage}%)</span></div>
+                    </div>
+                `;
             }
-
-            const totalCost = result.solution.reduce((sum, count, i) => sum + count * MATERIALS[i], 0);
-            const totalNeeded = requirements.reduce((sum, req) => sum + req.length * req.quantity, 0);
-            const wastePercentage = totalCost > 0 ? ((result.waste / totalCost) * 100).toFixed(2) : 0;
-
-            html += `
-                <div class="waste-info">
-                    <div class="result-item"><span class="result-label">📏 총 구매 길이:</span><span class="result-value">${totalCost.toLocaleString()}mm</span></div>
-                    <div class="result-item"><span class="result-label">📏 실제 필요 길이:</span><span class="result-value">${totalNeeded.toLocaleString()}mm</span></div>
-                    <div class="result-item"><span class="result-label">⚠️ 손실 길이:</span><span class="result-value">${result.waste.toLocaleString()}mm (${wastePercentage}%)</span></div>
-                </div>
-            `;
 
             if (result.details.length > 0) {
                 html += '<div class="cutting-details"><h4>✂️ 상세 절단 계획:</h4>';
@@ -562,6 +722,84 @@
             finalLengthInputs[2].value = 1700;
             finalQuantityInputs[2].value = 50;
         };
+
+        // PWA 기능: 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swContent = `
+                    const CACHE_NAME = 'pipe-calculator-v1';
+                    const urlsToCache = ['/'];
+                    
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then((cache) => cache.addAll(urlsToCache))
+                        );
+                    });
+                    
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then((response) => {
+                                    return response || fetch(event.request);
+                                })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swContent], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then((registration) => {
+                        console.log('서비스 워커 등록 성공:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('서비스 워커 등록 실패:', error);
+                    });
+            });
+        }
+
+        // PWA 설치 프롬프트
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        const closeBtn = document.getElementById('closeBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // 기본 브라우저 프롬프트 방지
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // 커스텀 설치 프롬프트 표시
+            installPrompt.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('사용자가 앱 설치를 승인했습니다.');
+                } else {
+                    console.log('사용자가 앱 설치를 거부했습니다.');
+                }
+                
+                deferredPrompt = null;
+                installPrompt.style.display = 'none';
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            installPrompt.style.display = 'none';
+        });
+
+        // 앱이 이미 설치된 경우 감지
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('앱이 성공적으로 설치되었습니다!');
+            installPrompt.style.display = 'none';
+        });
     </script>
 </body>
 </html>
