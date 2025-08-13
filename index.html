@@ -230,7 +230,8 @@
                 </div>
             </div>
             <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
-                <strong>⚠️ 톱날 절단 손실:</strong> 절단 1회당 3mm 손실 (kerf 고려됨)
+                <strong>⚠️ 톱날 절단 손실:</strong> 각 조각마다 절단 시 3mm 손실 발생<br>
+                <small>예: 1200mm 조각 4개 = (1200+3)×4 = 4,812mm 필요</small>
             </div>
         </div>
         
@@ -409,14 +410,13 @@
                     
                     // 가장 적합한 재료 찾기
                     for (const material of materials) {
-                        // 첫 번째 절단이면 kerf 손실 없음, 이후 절단마다 kerf 추가
-                        const kerfNeeded = material.cuts.length > 0 ? KERF_LOSS : 0;
-                        const totalNeeded = req.length + kerfNeeded;
+                        // 각 조각마다 절단 손실 3mm 발생
+                        const totalNeeded = req.length + KERF_LOSS;
                         
                         if (material.remaining >= totalNeeded) {
                             material.remaining -= totalNeeded;
                             material.cuts.push(req.length);
-                            material.kerfLoss += kerfNeeded;
+                            material.kerfLoss += KERF_LOSS;
                             remainingQuantity--;
                             placed = true;
                             break;
@@ -511,12 +511,13 @@
             };
         }
 
-        // 주어진 재료 길이에 최적 조합 찾기 (동적 계획법 사용)
+        // 주어진 재료 길이에 최적 조합 찾기 (절단 손실 고려)
         function findOptimalCombination(requirements, materialLength) {
-            // 각 길이별 최대 사용 가능 개수 계산
-            const maxCounts = requirements.map(req => 
-                Math.min(req.quantity, Math.floor(materialLength / req.length))
-            );
+            // 각 길이별 최대 사용 가능 개수 계산 (절단 손실 포함)
+            const maxCounts = requirements.map(req => {
+                const pieceWithKerf = req.length + KERF_LOSS;
+                return Math.min(req.quantity, Math.floor(materialLength / pieceWithKerf));
+            });
             
             let bestCombination = { totalUsed: 0, pieces: [] };
             
@@ -534,11 +535,11 @@
 
                 const req = requirements[reqIndex];
                 const maxPossible = Math.min(maxCounts[reqIndex], 
-                    Math.floor(remainingLength / req.length));
+                    Math.floor(remainingLength / (req.length + KERF_LOSS)));
 
                 // 가능한 개수만큼 시도 (역순으로 큰 것부터)
                 for (let count = maxPossible; count >= 0; count--) {
-                    const usedLength = count * req.length;
+                    const usedLength = count * (req.length + KERF_LOSS); // 절단 손실 포함
                     const newPieces = [];
                     for (let i = 0; i < count; i++) {
                         newPieces.push({ length: req.length });
@@ -546,13 +547,13 @@
 
                     tryCombo(
                         reqIndex + 1,
-                        currentUsed + usedLength,
+                        currentUsed + count * req.length, // 실제 사용된 길이 (절단 손실 제외)
                         [...currentPieces, ...newPieces],
                         remainingLength - usedLength
                     );
                     
                     // 조기 종료 (이미 최적인 경우)
-                    if (bestCombination.totalUsed === materialLength) break;
+                    if (bestCombination.totalUsed === materialLength - KERF_LOSS) break;
                 }
             }
 
